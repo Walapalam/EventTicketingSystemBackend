@@ -1,4 +1,4 @@
-package com.OOP.EventTicketingSystemBackend.CLI;
+package com.OOP.EventTicketingSystemBackend.CLI.temp;
 
 public class Ticket {
     private String ticketNo;
