@@ -5,23 +5,31 @@ import com.OOP.EventTicketingSystemBackend.CLI.services.TicketPool;
 import com.OOP.EventTicketingSystemBackend.CLI.services.TransactionLog;
 
 import java.util.ArrayList;
+import java.util.Scanner;
 
 public class Vendor extends User implements Runnable{
     private ArrayList<Event> events;
+    private Scanner scanner = new Scanner(System.in);
+    private static long userID = 0;
 
-    public Vendor(long userId, String userName, String password, TicketPool ticketPool) {
-        super(userId, userName, password);
+    public Vendor(String userName, String password, TicketPool ticketPool, String role) {
+        super(userName, password, "vendor");
+        this.role = "vendor";
+        this.userID = setUserID();
         events = new ArrayList<Event>();
     }
 
-    public void addEvent(String eventID, String eventName, int availableTickets, double ticketPrice){
+    public void addEvent(long eventID, String eventName, int availableTickets, double ticketPrice){
         Event event = new Event(eventID, eventName, availableTickets, ticketPrice);
         events.add(event);
     }
 
+    public static long setUserID(){
+        return ++userID;
+    }
     public void addEventTicket(Event event, int ticketCount){
         for (int i = 0; i < ticketCount; i++){
-            Ticket ticket = new Ticket(001, event.getEventName(), event.getTicketPrice(), event.getEventID());
+            Ticket ticket = new Ticket(event.getEventName(), event.getTicketPrice(), event.getEventID());
             event.getTickets().add(ticket);
             TransactionLog.getInstance().logTransaction(new Transaction(this.getUserId(), "release", ticket.getTicketId()));
         }
@@ -31,6 +39,7 @@ public class Vendor extends User implements Runnable{
         System.out.println("Releasing tickets for event: " + event.getEventName());
         for (Ticket ticket : event.getTickets()){
             releaseTicket(ticket);
+            System.out.println("Ticket released: " + ticket.getTicketId());
             TransactionLog.getInstance().logTransaction(new Transaction(this.getUserId(), "release", ticket.getTicketId()));
         }
     }
@@ -48,22 +57,79 @@ public class Vendor extends User implements Runnable{
         }
     }
 
-    public Event getEvent(String eventID){
+    public Event getEvent(long eventID){
         for (Event event : events){
-            if (event.getEventID().equals(eventID)){
+            if (event.getEventID() == eventID){
                 return event;
             }
         }
         return null;
     }
 
+    public void viewEvents(){
+        for (Event event : events){
+            System.out.println(event);
+        }
+    }
+
     @Override
     public void run() {
+        boolean vendorMenu = true;
+        System.out.println(Thread.currentThread());
 
+        while (vendorMenu) {
+            System.out.println("\nVendor Menu:");
+            System.out.println("1. Add an Event");
+            System.out.println("2. Release Tickets for an Event");
+            System.out.println("3. Release Ticket");
+            System.out.println("4. View Current Events");
+            System.out.println("5. Logout");
+            System.out.print("Choose an option: ");
+            int choice = scanner.nextInt();
+
+            switch (choice) {
+                case 1:
+                    System.out.print("Enter Event ID: ");
+                    long eventId = scanner.nextLong();
+                    System.out.print("Enter Event Name: ");
+                    String eventName = scanner.next();
+                    System.out.print("Enter Number of Tickets: ");
+                    int availableTickets = scanner.nextInt();
+                    System.out.print("Enter Ticket Price: ");
+                    double ticketPrice = scanner.nextDouble();
+                    addEvent(eventId, eventName, availableTickets, ticketPrice);
+                    break;
+                case 2:
+                    System.out.print("Enter Event ID to release tickets: ");
+                    long releaseEventId = scanner.nextLong();
+                    Event event = getEvent(releaseEventId);
+                    if (event != null) {
+                        releaseTickets(event);
+                    } else {
+                        System.out.println("Event not found.");
+                    }
+                    break;
+                case 3:
+                    Ticket ticket = new Ticket("Sample Event", 100.0, 00001); // Dummy ticket
+                    releaseTicket(ticket);
+                    break;
+                case 4:
+                    System.out.println("Vendor's Events: ");
+                    viewEvents();
+                    break;
+                case 5:
+                    vendorMenu = false;
+                    System.out.println("Logged out as Vendor.");
+                    Thread.currentThread().interrupt();
+                    break;
+                default:
+                    System.out.println("Invalid choice. Please try again.");
+            }
+        }
     }
 
     @Override
     public String getRole() {
-        return "";
+        return "vendor";
     }
 }

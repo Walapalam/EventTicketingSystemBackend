@@ -4,23 +4,27 @@ public class Ticket {
     private long ticketId;
     private String eventName;
     private double price;
-    private String eventID;
+    private long eventID;
+    private static long ticketIDCounter = 0;
 
     // For single tickets
-    public Ticket(int ticketId, String eventName, double price) {
-        this.ticketId = ticketId;
+    public Ticket(String eventName, double price) {
+        this.ticketId = generateTicketID();
         this.eventName = eventName;
         this.price = price;
     }
 
     // For multiple tickets in events
-    public Ticket(int ticketId, String eventName, double price, String eventID) {
-        this.ticketId = ticketId;
+    public Ticket(String eventName, double price, long eventID) {
+        this.ticketId = generateTicketID();
         this.eventName = eventName;
         this.price = price;
         this.eventID = eventID;
     }
 
+    public static long generateTicketID() {
+        return ++ticketIDCounter;
+    }
     public long getTicketId() {
         return ticketId;
     }
@@ -33,7 +37,7 @@ public class Ticket {
         return price;
     }
 
-    public String getEventID() {
+    public long getEventID() {
         return eventID;
     }
 }

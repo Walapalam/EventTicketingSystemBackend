@@ -1,10 +1,12 @@
 package com.OOP.EventTicketingSystemBackend.CLI;
 
 import com.OOP.EventTicketingSystemBackend.CLI.models.*;
+import com.OOP.EventTicketingSystemBackend.CLI.repositories.UserRepository;
 import com.OOP.EventTicketingSystemBackend.CLI.services.TicketPool;
 import com.OOP.EventTicketingSystemBackend.CLI.services.TransactionLog;
 import com.OOP.EventTicketingSystemBackend.CLI.tasks.Customer;
 import com.OOP.EventTicketingSystemBackend.CLI.tasks.Vendor;
+import com.OOP.EventTicketingSystemBackend.CLI.models.User;
 
 import java.util.Scanner;
 
@@ -20,24 +22,28 @@ public class EventTicketingCLI {
 
         while (running) {
             System.out.println("\nMain Menu:");
-            System.out.println("1. Login as Customer");
-            System.out.println("2. Login as Vendor");
+            System.out.println("1. Register");
+            System.out.println("2. Login");
             System.out.println("3. View Transaction History");
-            System.out.println("4. Exit");
+            System.out.println("4. Registered users"); //
+            System.out.println("5. Exit");
             System.out.print("Choose an option: ");
             int choice = scanner.nextInt();
 
             switch (choice) {
                 case 1:
-                    handleCustomerActions();
+                    handleRegistration();
                     break;
                 case 2:
-                    handleVendorActions();
+                    handleUserLogin();
                     break;
                 case 3:
                     viewTransactionHistory();
                     break;
                 case 4:
+                    UserRepository.seeUsers();
+                    break;
+                case 5:
                     running = false;
                     System.out.println("Exiting the system. Goodbye!");
                     break;
@@ -47,101 +53,94 @@ public class EventTicketingCLI {
         }
     }
 
-    private static void handleCustomerActions() {
-        System.out.print("Enter Customer ID: ");
-        long customerId = scanner.nextLong();
-        System.out.print("Enter Customer Name: ");
-        String customerName = scanner.next();
-        System.out.print("Enter Password: ");
+    private static void handleRegistration() {
+        System.out.println("Enter username: ");
+        String username = scanner.next();
+        System.out.println("Enter password: ");
         String password = scanner.next();
+        System.out.println("Enter role (vendor/customer): ");
+        String role = scanner.next();
 
-        Customer customer = new Customer(customerId, customerName, password);
-        boolean customerMenu = true;
+        if (UserRepository.checkUsername(username)) {
+            System.out.println("Username already taken");
+            return;
+        }
 
-        while (customerMenu) {
-            System.out.println("\nCustomer Menu:");
-            System.out.println("1. Purchase a Ticket");
-            System.out.println("2. Purchase Multiple Tickets");
-            System.out.println("3. View Current Tickets");
-            System.out.println("4. Logout");
-            System.out.print("Choose an option: ");
-            int choice = scanner.nextInt();
+        User user = null;
+        if (role.equalsIgnoreCase("vendor")) {
+            user = new Vendor(username, password, ticketPool, "vendor");
+            System.out.println(user.getRole());
+            System.out.println("Added vendor");
+        } else if (role.equalsIgnoreCase("customer")) {
+            user = new Customer(username, password, "customer");
+            System.out.println("Added customer");
+            System.out.println(user.getRole());
+        }
 
-            switch (choice) {
-                case 1:
-                    customer.purchaseTicket();
-                    break;
-                case 2:
-                    System.out.print("Enter the number of tickets to purchase: ");
-                    int ticketCount = scanner.nextInt();
-                    Event dummyEvent = new Event("EVENT123", "Sample Event", ticketCount, 100.0); // Dummy event
-                    customer.purchaseTickets(ticketCount, dummyEvent);
-                    break;
-                case 3:
-                    System.out.println("Customer's Tickets: " + customer.toString());
-                    break;
-                case 4:
-                    customerMenu = false;
-                    System.out.println("Logged out as Customer.");
-                    break;
-                default:
-                    System.out.println("Invalid choice. Please try again.");
+        if (user != null) {
+            try {
+                UserRepository.addUser(user);
+                System.out.println("User added to repository");
+            } catch (RuntimeException e) {
+                System.out.println(e);
             }
+        } else {
+            System.out.println("User role not specified");
         }
     }
 
-    private static void handleVendorActions() {
-        System.out.print("Enter Vendor ID: ");
-        long vendorId = scanner.nextLong();
-        System.out.print("Enter Vendor Name: ");
-        String vendorName = scanner.next();
-        System.out.print("Enter Password: ");
+    private static void handleUserLogin() {
+        System.out.println("Enter username: ");
+        String username = scanner.next();
+        System.out.println("Enter password: ");
         String password = scanner.next();
 
-        Vendor vendor = new Vendor(vendorId, vendorName, password, ticketPool);
-        boolean vendorMenu = true;
-
-        while (vendorMenu) {
-            System.out.println("\nVendor Menu:");
-            System.out.println("1. Add an Event");
-            System.out.println("2. Release Tickets for an Event");
-            System.out.println("3. View Current Events");
-            System.out.println("4. Logout");
-            System.out.print("Choose an option: ");
-            int choice = scanner.nextInt();
-
-            switch (choice) {
-                case 1:
-                    System.out.print("Enter Event ID: ");
-                    String eventId = scanner.next();
-                    System.out.print("Enter Event Name: ");
-                    String eventName = scanner.next();
-                    System.out.print("Enter Number of Tickets: ");
-                    int availableTickets = scanner.nextInt();
-                    System.out.print("Enter Ticket Price: ");
-                    double ticketPrice = scanner.nextDouble();
-                    vendor.addEvent(eventId, eventName, availableTickets, ticketPrice);
-                    break;
-                case 2:
-                    System.out.print("Enter Event ID to release tickets: ");
-                    String releaseEventId = scanner.next();
-                    Event event = vendor.getEvent(releaseEventId);
-                    if (event != null) {
-                        vendor.releaseTickets(event);
-                    } else {
-                        System.out.println("Event not found.");
-                    }
-                    break;
-                case 3:
-                    System.out.println("Vendor's Events: " + vendor.toString());
-                    break;
-                case 4:
-                    vendorMenu = false;
-                    System.out.println("Logged out as Vendor.");
-                    break;
-                default:
-                    System.out.println("Invalid choice. Please try again.");
+        User user = null;
+        for (User u : UserRepository.getUsers()) {
+            if (u.getUserName().equals(username) && u.getPassword().equals(password)) {
+                user = u;
+                break;
             }
+        }
+
+        if (user != null) {
+            System.out.printf("User found: %s - %s\n", user.getUserName(), user.getRole()); // Debug print
+            if (user.getRole().equalsIgnoreCase("vendor")) {
+                System.out.printf("Logged in as %s - %s\n", username, user.getRole());
+                handleVendorActions(user);
+            } else if (user.getRole().equalsIgnoreCase("customer")) {
+                System.out.printf("Logged in as %s - %s\n", username, user.getRole());
+                handleCustomerActions(user);
+            } else {
+                System.out.println("Invalid role.");
+            }
+        } else {
+            System.out.println("Invalid username or password.");
+        }
+    }
+
+    private static void handleCustomerActions(User user) {
+        Customer customer = new Customer(user.getUserName(), user.getPassword(), "customer");
+        Thread custThread = new Thread(customer);
+        custThread.start();
+
+        try {
+            custThread.join();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void handleVendorActions(User user) {
+        System.out.println(Thread.currentThread());
+
+        Vendor vendor = new Vendor(user.getUserName(), user.getPassword(), ticketPool, "vendor");
+        Thread vendorThread = new Thread(vendor);
+        vendorThread.start();
+        try {
+            vendorThread.join();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 

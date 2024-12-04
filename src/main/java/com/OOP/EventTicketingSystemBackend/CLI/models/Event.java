@@ -1,27 +1,41 @@
 package com.OOP.EventTicketingSystemBackend.CLI.models;
 
-import java.util.ArrayList;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import org.apache.tomcat.util.collections.SynchronizedQueue;
 
+import java.util.ArrayList;
+import java.util.concurrent.BlockingQueue;
+
+@Entity
 public class Event {
-    private String eventID;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private static long eventID = 0;
     private String eventName;
     private int availableTickets;
     private double ticketPrice;
-    private ArrayList<Ticket> tickets;
+    private BlockingQueue<Ticket> tickets;
 
-    public Event(String eventID, String eventName, int availableTickets, double ticketPrice) {
+    public Event(long eventID, String eventName, int availableTickets, double ticketPrice) {
         this.eventID = eventID;
         this.eventName = eventName;
         this.availableTickets = availableTickets;
         this.ticketPrice = ticketPrice;
-        this.tickets = new ArrayList<Ticket>();
     }
 
-    public String getEventID() {
+    public Event() {
+
+    }
+
+    public long getEventID() {
         return eventID;
     }
 
-    public void setEventID(String eventID) {
+    public void setEventID(long eventID) {
         this.eventID = eventID;
     }
 
@@ -49,7 +63,7 @@ public class Event {
         this.availableTickets = availableTickets;
     }
 
-    public ArrayList<Ticket> getTickets() {
+    public BlockingQueue<Ticket> getTickets() {
         return tickets;
     }
 

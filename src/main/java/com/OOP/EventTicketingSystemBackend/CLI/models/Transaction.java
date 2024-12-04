@@ -9,7 +9,10 @@ public class Transaction {
     private long ticketNo;
     private LocalDateTime timestamp;
 
+    private static int transactionCounter = 0;
+
     public Transaction(long userId, String transactionType, long ticketNo) {
+        this.transactionId = setTransactionID();
         this.userId = userId;
         this.transactionType = transactionType;
         this.timestamp = LocalDateTime.now();
@@ -22,6 +25,10 @@ public class Transaction {
 
     public long getUserId() {
         return userId;
+    }
+
+    public int setTransactionID(){
+        return ++transactionCounter;
     }
 
     public String getTransactionType() {
@@ -39,7 +46,7 @@ public class Transaction {
     @Override
     public String toString() {
         return "Transaction{" +
-                "transactionId=" + transactionId +
+                "transactionId=" + this.transactionId +
                 ", userId='" + userId + '\'' +
                 ", transactionType='" + transactionType + '\'' +
                 ", ticketNo=" + ticketNo +

@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class TransactionLog {
-
     private static TransactionLog instance;
     private List<Transaction> transactionHistory;
     private static AtomicInteger transactionIdCounter = new AtomicInteger(1);

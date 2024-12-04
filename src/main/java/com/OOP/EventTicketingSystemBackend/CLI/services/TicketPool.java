@@ -57,7 +57,7 @@ public class TicketPool {
             // Check if releasing tickets will not exceed the max capacity
             if (ticketQueue.size() + ticketCount <= Configuration.maxTicketCapacity) {
                 for (int i = 0; i < ticketCount; i++) {
-                    ticketQueue.put(event.getTickets().get(i)); // Add tickets to the queue from the tickets in event
+                    ticketQueue.put(event.getTickets().take()); // Add tickets to the queue from the tickets in event
                     Thread.sleep(Configuration.ticketReleaseRate);
                 }
                 System.out.println(ticketCount + " tickets released.");
