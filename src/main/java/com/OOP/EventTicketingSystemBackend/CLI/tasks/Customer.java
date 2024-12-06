@@ -42,7 +42,7 @@ public class Customer extends User implements Runnable{
                 Ticket ticket = TicketPool.getInstance().retrieveTicket();
                 System.out.println("Ticket purchased: " + ticket.getTicketId());
                 tickets.add(ticket);
-                TransactionLog.getInstance().logTransaction(new Transaction(this.getUserId(), "purchase", ticket.getTicketId()));
+                TransactionLog.getInstance().logTransaction(new Transaction(this, "purchase", ticket));
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -58,7 +58,7 @@ public class Customer extends User implements Runnable{
                 try {
                     Ticket ticket = TicketPool.getInstance().retrieveTicket();
                     tickets.add(ticket);
-                    TransactionLog.getInstance().logTransaction(new Transaction(this.getUserId(), "purchase", ticket.getTicketId()));
+                    TransactionLog.getInstance().logTransaction(new Transaction(this, "purchase", ticket));
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -88,7 +88,7 @@ public class Customer extends User implements Runnable{
                 case 2: // Does not work yet
                     System.out.print("Enter the number of tickets to purchase(Does not work): ");
                     int ticketCount = scanner.nextInt();
-                    Event dummyEvent = new Event(0001345, "Sample Event", ticketCount, 100.0); // Dummy event
+                    Event dummyEvent = new Event("Sample Event", ticketCount, 100.0); // Dummy event
                     purchaseTickets(ticketCount, dummyEvent);
                     break;
                 case 3:

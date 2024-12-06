@@ -7,6 +7,8 @@ import com.OOP.EventTicketingSystemBackend.CLI.services.TransactionLog;
 import java.util.ArrayList;
 import java.util.Scanner;
 
+
+// Implement a lock for arraylist or change it to a blocking queue or something
 public class Vendor extends User implements Runnable{
     private ArrayList<Event> events;
     private Scanner scanner = new Scanner(System.in);
@@ -19,8 +21,12 @@ public class Vendor extends User implements Runnable{
         events = new ArrayList<Event>();
     }
 
-    public void addEvent(long eventID, String eventName, int availableTickets, double ticketPrice){
-        Event event = new Event(eventID, eventName, availableTickets, ticketPrice);
+    public void addEvent(String eventName, int availableTickets, double ticketPrice){
+        Event event = new Event(eventName, availableTickets, ticketPrice);
+        events.add(event);
+    }
+
+    public void addEvent(Event event){
         events.add(event);
     }
 
@@ -29,9 +35,9 @@ public class Vendor extends User implements Runnable{
     }
     public void addEventTicket(Event event, int ticketCount){
         for (int i = 0; i < ticketCount; i++){
-            Ticket ticket = new Ticket(event.getEventName(), event.getTicketPrice(), event.getEventID());
+            Ticket ticket = new Ticket(event.getEventName(), event.getTicketPrice(), event);
             event.getTickets().add(ticket);
-            TransactionLog.getInstance().logTransaction(new Transaction(this.getUserId(), "release", ticket.getTicketId()));
+            TransactionLog.getInstance().logTransaction(new Transaction(this, "release", ticket));
         }
     }
 
@@ -40,7 +46,7 @@ public class Vendor extends User implements Runnable{
         for (Ticket ticket : event.getTickets()){
             releaseTicket(ticket);
             System.out.println("Ticket released: " + ticket.getTicketId());
-            TransactionLog.getInstance().logTransaction(new Transaction(this.getUserId(), "release", ticket.getTicketId()));
+            TransactionLog.getInstance().logTransaction(new Transaction(this, "release", ticket));
         }
     }
 
@@ -48,7 +54,7 @@ public class Vendor extends User implements Runnable{
         if (TicketPool.getInstance().getCurrentPoolSize() < Configuration.maxTicketCapacity){
             try {
                 TicketPool.getInstance().addTicket(ticket);
-                TransactionLog.getInstance().logTransaction(new Transaction(this.getUserId(), "release", ticket.getTicketId()));
+                TransactionLog.getInstance().logTransaction(new Transaction(this, "release", ticket));
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -89,15 +95,13 @@ public class Vendor extends User implements Runnable{
 
             switch (choice) {
                 case 1:
-                    System.out.print("Enter Event ID: ");
-                    long eventId = scanner.nextLong();
                     System.out.print("Enter Event Name: ");
                     String eventName = scanner.next();
                     System.out.print("Enter Number of Tickets: ");
                     int availableTickets = scanner.nextInt();
                     System.out.print("Enter Ticket Price: ");
                     double ticketPrice = scanner.nextDouble();
-                    addEvent(eventId, eventName, availableTickets, ticketPrice);
+                    addEvent(eventName, availableTickets, ticketPrice);
                     break;
                 case 2:
                     System.out.print("Enter Event ID to release tickets: ");
@@ -110,7 +114,13 @@ public class Vendor extends User implements Runnable{
                     }
                     break;
                 case 3:
-                    Ticket ticket = new Ticket("Sample Event", 100.0, 00001); // Dummy ticket
+                    Event ticketEvent = new Event("Movie", 1, 2000);
+                    addEvent(ticketEvent);
+
+                    addEventTicket(ticketEvent, 1);
+                    Ticket ticket = new Ticket("Default Event", 100.0, ticketEvent);// Dummy ticket
+
+                    releaseTickets(ticketEvent);
                     releaseTicket(ticket);
                     break;
                 case 4:

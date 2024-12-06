@@ -1,10 +1,22 @@
 package com.OOP.EventTicketingSystemBackend.CLI.models;
 
+import jakarta.persistence.*;
+
+@Entity
 public class Ticket {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private long ticketId;
+
     private String eventName;
     private double price;
-    private long eventID;
+
+    @ManyToOne
+    @JoinColumn(name = "eventID", nullable = false)
+    private Event event;
+
+    @Transient
     private static long ticketIDCounter = 0;
 
     // For single tickets
@@ -15,11 +27,17 @@ public class Ticket {
     }
 
     // For multiple tickets in events
-    public Ticket(String eventName, double price, long eventID) {
+    public Ticket(String eventName, double price, Event event) {
         this.ticketId = generateTicketID();
         this.eventName = eventName;
         this.price = price;
-        this.eventID = eventID;
+        //this.eventID = eventID;
+        this.event = event;
+
+    }
+
+    public Ticket() {
+
     }
 
     public static long generateTicketID() {
@@ -38,6 +56,22 @@ public class Ticket {
     }
 
     public long getEventID() {
-        return eventID;
+        return event.getEventID();
+    }
+
+    public void setEventName(String eventName) {
+        this.eventName = eventName;
+    }
+
+    public void setEventID(long eventID) {
+        event.setEventID(eventID);
+    }
+
+    public void setTicketId(long ticketId) {
+        this.ticketId = ticketId;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
     }
 }

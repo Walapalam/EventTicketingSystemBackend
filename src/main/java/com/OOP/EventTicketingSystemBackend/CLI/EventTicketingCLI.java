@@ -1,7 +1,7 @@
 package com.OOP.EventTicketingSystemBackend.CLI;
 
 import com.OOP.EventTicketingSystemBackend.CLI.models.*;
-import com.OOP.EventTicketingSystemBackend.CLI.repositories.UserRepository;
+import com.OOP.EventTicketingSystemBackend.CLI.repositories.LoginRepository;
 import com.OOP.EventTicketingSystemBackend.CLI.services.TicketPool;
 import com.OOP.EventTicketingSystemBackend.CLI.services.TransactionLog;
 import com.OOP.EventTicketingSystemBackend.CLI.tasks.Customer;
@@ -18,6 +18,8 @@ public class EventTicketingCLI {
     public static void main(String[] args) {
         System.out.println("Welcome to the Event Ticketing System CLI!");
         System.out.println("============================================");
+
+        Configuration.configureFromJSON("src/main/java/com/OOP/EventTicketingSystemBackend/CLI/config.json");
         boolean running = true;
 
         while (running) {
@@ -41,7 +43,7 @@ public class EventTicketingCLI {
                     viewTransactionHistory();
                     break;
                 case 4:
-                    UserRepository.seeUsers();
+                    LoginRepository.seeUsers();
                     break;
                 case 5:
                     running = false;
@@ -61,7 +63,7 @@ public class EventTicketingCLI {
         System.out.println("Enter role (vendor/customer): ");
         String role = scanner.next();
 
-        if (UserRepository.checkUsername(username)) {
+        if (LoginRepository.checkUsername(username)) {
             System.out.println("Username already taken");
             return;
         }
@@ -79,7 +81,7 @@ public class EventTicketingCLI {
 
         if (user != null) {
             try {
-                UserRepository.addUser(user);
+                LoginRepository.addUser(user);
                 System.out.println("User added to repository");
             } catch (RuntimeException e) {
                 System.out.println(e);
@@ -96,7 +98,7 @@ public class EventTicketingCLI {
         String password = scanner.next();
 
         User user = null;
-        for (User u : UserRepository.getUsers()) {
+        for (User u : LoginRepository.getUsers()) {
             if (u.getUserName().equals(username) && u.getPassword().equals(password)) {
                 user = u;
                 break;

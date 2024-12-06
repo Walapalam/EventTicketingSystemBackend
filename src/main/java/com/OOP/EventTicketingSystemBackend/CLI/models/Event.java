@@ -1,34 +1,46 @@
 package com.OOP.EventTicketingSystemBackend.CLI.models;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import com.OOP.EventTicketingSystemBackend.CLI.services.TicketPool;
+import jakarta.persistence.*;
 import org.apache.tomcat.util.collections.SynchronizedQueue;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 
 @Entity
 public class Event {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    private static long eventID = 0;
+    private long eventID;
+
     private String eventName;
     private int availableTickets;
     private double ticketPrice;
+
+    @Transient
     private BlockingQueue<Ticket> tickets;
 
-    public Event(long eventID, String eventName, int availableTickets, double ticketPrice) {
-        this.eventID = eventID;
+    @Transient
+    private static long eventIDCounter = 0;
+
+    public Event(String eventName, int availableTickets, double ticketPrice) {
+        this.eventID = generateEventID();
         this.eventName = eventName;
         this.availableTickets = availableTickets;
         this.ticketPrice = ticketPrice;
+        this.tickets = new LinkedBlockingQueue<Ticket>(availableTickets);
     }
 
     public Event() {
 
+    }
+
+    public static long generateEventID() {
+        return ++eventIDCounter;
     }
 
     public long getEventID() {
@@ -74,8 +86,13 @@ public class Event {
                 ", Ticket Price=" + ticketPrice + "]";
     }
 
-    public void addTicket(Ticket ticket) {
+    public synchronized void addTicket(Ticket ticket) {
         tickets.add(ticket);
+        try {
+            TicketPool.getInstance().addTicket(ticket);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
 

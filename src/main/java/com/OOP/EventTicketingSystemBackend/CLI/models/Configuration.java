@@ -1,5 +1,6 @@
 package com.OOP.EventTicketingSystemBackend.CLI.models;
 
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -7,9 +8,19 @@ import java.util.Scanner;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 
+@Entity
 public class Configuration {
     // Configurable parameters
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private long ID;
+
     public static int totalTickets = 1000;
     public static int ticketReleaseRate = 5;
     public static int customerRetrievalRate = 3;
@@ -61,8 +72,14 @@ public class Configuration {
 
     // Method to load configurations from a JSON file
     // Throws error, check for JSON file, if available config will load, if not will have to use CLI
-    public static void configureFromJSON(String filePath) throws IOException{
-        FileReader reader = new FileReader(filePath);
+    public static void configureFromJSON(String filePath){
+        FileReader reader = null;
+        try {
+            reader = new FileReader(filePath);
+        } catch (FileNotFoundException e) {
+            configureViaCLI();
+            return;
+        }
 
         JsonObject jsonObject = JsonParser.parseReader(reader).getAsJsonObject();
 
