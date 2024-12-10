@@ -13,8 +13,12 @@ public class Ticket {
     private double price;
 
     @ManyToOne
-    @JoinColumn(name = "eventID", nullable = false)
+    @JoinColumn(name = "eventID", nullable = true)
     private Event event;
+
+    @ManyToOne
+    @JoinColumn(name = "customerID", nullable = true)
+    private User customer;
 
     @Transient
     private static long ticketIDCounter = 0;
@@ -73,5 +77,9 @@ public class Ticket {
 
     public void setPrice(double price) {
         this.price = price;
+    }
+
+    public Event getEvent() {
+        return event;
     }
 }

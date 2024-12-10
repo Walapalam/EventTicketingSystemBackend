@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "role")
 public abstract class User {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -14,7 +16,7 @@ public abstract class User {
 
     @Setter
     @Getter
-    private String userName;
+    private String username;
 
     @Setter
     @Getter
@@ -22,15 +24,15 @@ public abstract class User {
 
     @Setter
     @Getter
+    @Column(insertable = false, updatable = false)
     protected String role;
-
 
     @Transient
     private static long userIdCounter = 0;
 
     public User(String userName, String password, String role) {
         this.userId = generateUserId();
-        this.userName = userName;
+        this.username = userName;
         this.password = password;
         this.role = role;
     }
@@ -55,6 +57,7 @@ public abstract class User {
 
     @Override
     public String toString() {
-        return String.format("User ID: %d, Username: %s, Role: %s", this.userId, this.userName, this.role);
+        return String.format("User ID: %d, Username: %s, Role: %s", this.userId, this.username, this.role);
     }
+
 }

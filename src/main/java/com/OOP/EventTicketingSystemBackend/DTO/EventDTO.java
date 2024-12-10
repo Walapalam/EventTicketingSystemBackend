@@ -13,6 +13,7 @@ public class EventDTO {
         this.ticketPrice = ticketPrice;
     }
 
+
     public long getEventID() {
         return eventID;
     }

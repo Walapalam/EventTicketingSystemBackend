@@ -4,18 +4,31 @@ import com.OOP.EventTicketingSystemBackend.CLI.models.Event;
 import com.OOP.EventTicketingSystemBackend.CLI.models.Ticket;
 import com.OOP.EventTicketingSystemBackend.CLI.models.Transaction;
 import com.OOP.EventTicketingSystemBackend.CLI.models.User;
+import com.OOP.EventTicketingSystemBackend.CLI.repositories.TicketRepository;
 import com.OOP.EventTicketingSystemBackend.CLI.services.TicketPool;
 import com.OOP.EventTicketingSystemBackend.CLI.services.TransactionLog;
+import jakarta.persistence.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Scanner;
+import java.util.*;
 
+@Entity
+@DiscriminatorValue("customer")
+@Component
 public class Customer extends User implements Runnable{
-    private ArrayList<Ticket> tickets;
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Ticket> tickets;
+
+    @Transient
     private Iterator<Ticket> listOfTickets;
+
+    @Transient
     private Scanner scanner = new Scanner(System.in);
     private static long userID = 0;
+
+    @Transient
+    private TicketRepository ticketRepository;
 
     public Customer(String userName, String password, String role) {
         super(userName, password, "customer");
@@ -26,39 +39,58 @@ public class Customer extends User implements Runnable{
     }
 
     public Customer(User user){
-        super(user.getUserName(), user.getPassword(), "customer");
+        super(user.getUsername(), user.getPassword(), "customer");
         tickets = new ArrayList<Ticket>();
     }
 
+    public Customer() {
+
+    }
+
+    @Autowired
+    public Customer(TicketRepository ticketRepository) {
+        this.ticketRepository = ticketRepository;
+    }
 
 
     public static long setUserID() {
         return userID++;
     }
 
-    public synchronized void purchaseTicket(){
-        if (TicketPool.getInstance().getCurrentPoolSize() > 0){
+    public synchronized void purchaseTicket(int ticketID) {
+        Optional<Ticket> ticketOptional = ticketRepository.findById(ticketID);
+        if (ticketOptional.isPresent()) {
+            Ticket ticket = ticketOptional.get();
             try {
-                Ticket ticket = TicketPool.getInstance().retrieveTicket();
-                System.out.println("Ticket purchased: " + ticket.getTicketId());
-                tickets.add(ticket);
-                TransactionLog.getInstance().logTransaction(new Transaction(this, "purchase", ticket));
+                if (TicketPool.getInstance().getCurrentPoolSize() > 0 && TicketPool.getInstance().retrieveTicket().equals(ticket)) {
+                    System.out.println("Ticket purchased: " + ticket.getTicketId());
+                    tickets.add(ticket);
+                    TransactionLog.getInstance().logTransaction(new Transaction(this, "purchase", ticket));
+                } else {
+                    System.out.println("Ticket pool is empty or ticket not available.");
+                }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                throw new RuntimeException(e);
             }
         } else {
-            System.out.println("Ticket pool is empty");
+            System.out.println("Ticket not found in repository.");
         }
     }
 
-    public synchronized void purchaseTickets(int count, Event event){
-        if (event.getTickets().size() >= count) {
+    public synchronized void purchaseTickets(int count, Event event) {
+        if (event.getAvailableTickets() >= count) {
             for (int i = 0; i < count; i++) {
-                // Replace with purchaseTicket()
                 try {
                     Ticket ticket = TicketPool.getInstance().retrieveTicket();
-                    tickets.add(ticket);
-                    TransactionLog.getInstance().logTransaction(new Transaction(this, "purchase", ticket));
+                    if (ticket != null) {
+                        tickets.add(ticket);
+                        event.decrementTickets(1);
+                        TransactionLog.getInstance().logTransaction(new Transaction(this, "purchase", ticket));
+                        System.out.println("Ticket purchased: " + ticket.getTicketId());
+                    } else {
+                        System.out.println("Ticket pool is empty.");
+                        break;
+                    }
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -83,7 +115,10 @@ public class Customer extends User implements Runnable{
 
             switch (choice) {
                 case 1:
-                    purchaseTicket();
+                    TicketPool.getInstance().viewAllAvailableTickets();
+                    System.out.println("Enter the ticket ID to purchase: ");
+                    int ticketID = scanner.nextInt();
+                    purchaseTicket(ticketID);
                     break;
                 case 2: // Does not work yet
                     System.out.print("Enter the number of tickets to purchase(Does not work): ");

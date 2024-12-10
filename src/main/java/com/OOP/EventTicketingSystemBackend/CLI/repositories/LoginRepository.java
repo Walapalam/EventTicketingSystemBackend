@@ -15,13 +15,13 @@ public class LoginRepository {
 
     // For registering users
     public static void addUser(User user){
-        if (usernames.contains(user.getUserName())){
+        if (usernames.contains(user.getUsername())){
             throw new RuntimeException("Username taken");
         } else {
             try {
                 System.out.println("Before placing user in repo");
                 users.put(user);
-                usernames.put(user.getUserName());
+                usernames.put(user.getUsername());
                 System.out.println("After placing user in repo");
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
@@ -40,7 +40,7 @@ public class LoginRepository {
 
     public static synchronized String findUser(String username) {
         for (User user : users) {
-            if (user.getUserName().equals(username)) {
+            if (user.getUsername().equals(username)) {
                 return user.getRole();
             }
         }

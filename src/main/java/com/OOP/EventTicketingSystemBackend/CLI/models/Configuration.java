@@ -4,16 +4,20 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Scanner;
 
+import com.OOP.EventTicketingSystemBackend.CLI.repositories.ConfigRepository;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
 
 @Entity
+@Component
+@ConfigurationProperties(prefix = "configuration")
 public class Configuration {
     // Configurable parameters
 
@@ -21,10 +25,29 @@ public class Configuration {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long ID;
 
+    //Find a way to set these 4 into the values of the other 4 static variables
+    @Column
+    public int TotalTickets = 1000;
+    @Column
+    public int TicketReleaseRate = 5;
+    @Column
+    public int CustomerRetrievalRate = 3;
+    @Column
+    public int MaxTicketCapacity = 500;
+
+
     public static int totalTickets = 1000;
     public static int ticketReleaseRate = 5;
     public static int customerRetrievalRate = 3;
     public static int maxTicketCapacity = 500;
+
+    // For saving into DB
+    public Configuration() {
+        this.TotalTickets = totalTickets;
+        this.TicketReleaseRate = ticketReleaseRate;
+        this.CustomerRetrievalRate = customerRetrievalRate;
+        this.MaxTicketCapacity = maxTicketCapacity;
+    }
 
     // Method to display current configuration
     public static void displayConfiguration() {
@@ -77,6 +100,7 @@ public class Configuration {
         try {
             reader = new FileReader(filePath);
         } catch (FileNotFoundException e) {
+            System.out.println("JSON file not found. Configuring via CLI...");
             configureViaCLI();
             return;
         }
@@ -106,6 +130,26 @@ public class Configuration {
         } catch (IOException e) {
             System.err.println("Error writing to JSON file: " + e.getMessage());
         }
+    }
+
+    public static void getConfigurationFromDatabase(long ID, String filepath, ConfigRepository configurationRepository) {
+        Configuration configuration = configurationRepository.findById((int) ID).orElse(null);
+        if (configuration == null) {
+            System.out.println("Configuration not found.\n Configuring from JSON file...");
+            Configuration.configureFromJSON(filepath);
+        } else {
+            System.out.println("Configuration found.");
+            System.out.println("Total Tickets: " + configuration.TotalTickets);
+            System.out.println("Ticket Release Rate: " + configuration.TicketReleaseRate + " tickets/sec");
+            System.out.println("Customer Retrieval Rate: " + configuration.CustomerRetrievalRate + " tickets/sec");
+            System.out.println("Max Ticket Capacity: " + configuration.MaxTicketCapacity);
+        }
+    }
+
+    public static void saveConfigurationToDatabase(ConfigRepository configurationRepository) {
+        Configuration configuration = new Configuration();
+        configurationRepository.save(configuration);
+        System.out.println("Configuration saved to database.");
     }
 }
 

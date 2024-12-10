@@ -1,25 +1,35 @@
 package com.OOP.EventTicketingSystemBackend.CLI;
 
 import com.OOP.EventTicketingSystemBackend.CLI.models.*;
-import com.OOP.EventTicketingSystemBackend.CLI.repositories.LoginRepository;
+import com.OOP.EventTicketingSystemBackend.CLI.repositories.ConfigRepository;
+import com.OOP.EventTicketingSystemBackend.CLI.repositories.UserRepository;
 import com.OOP.EventTicketingSystemBackend.CLI.services.TicketPool;
 import com.OOP.EventTicketingSystemBackend.CLI.services.TransactionLog;
 import com.OOP.EventTicketingSystemBackend.CLI.tasks.Customer;
 import com.OOP.EventTicketingSystemBackend.CLI.tasks.Vendor;
-import com.OOP.EventTicketingSystemBackend.CLI.models.User;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.Scanner;
 
+@Component
 public class EventTicketingCLI {
     private static Scanner scanner = new Scanner(System.in);
     private static TicketPool ticketPool = TicketPool.getInstance();
     private static TransactionLog transactionLog = TransactionLog.getInstance();
 
-    public static void main(String[] args) {
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private ConfigRepository configRepository;
+
+
+    public void run() {
         System.out.println("Welcome to the Event Ticketing System CLI!");
         System.out.println("============================================");
 
-        Configuration.configureFromJSON("src/main/java/com/OOP/EventTicketingSystemBackend/CLI/config.json");
+        Configuration.getConfigurationFromDatabase(1,"src/main/java/com/OOP/EventTicketingSystemBackend/CLI/config.json", configRepository);
         boolean running = true;
 
         while (running) {
@@ -27,7 +37,7 @@ public class EventTicketingCLI {
             System.out.println("1. Register");
             System.out.println("2. Login");
             System.out.println("3. View Transaction History");
-            System.out.println("4. Registered users"); //
+            System.out.println("4. Registered users");
             System.out.println("5. Exit");
             System.out.print("Choose an option: ");
             int choice = scanner.nextInt();
@@ -43,10 +53,11 @@ public class EventTicketingCLI {
                     viewTransactionHistory();
                     break;
                 case 4:
-                    LoginRepository.seeUsers();
+                    seeUsers();
                     break;
                 case 5:
                     running = false;
+                    Configuration.saveConfigurationToDatabase(configRepository);
                     System.out.println("Exiting the system. Goodbye!");
                     break;
                 default:
@@ -55,7 +66,7 @@ public class EventTicketingCLI {
         }
     }
 
-    private static void handleRegistration() {
+    private void handleRegistration() {
         System.out.println("Enter username: ");
         String username = scanner.next();
         System.out.println("Enter password: ");
@@ -63,7 +74,7 @@ public class EventTicketingCLI {
         System.out.println("Enter role (vendor/customer): ");
         String role = scanner.next();
 
-        if (LoginRepository.checkUsername(username)) {
+        if (userRepository.existsByUsername(username)) {
             System.out.println("Username already taken");
             return;
         }
@@ -81,7 +92,7 @@ public class EventTicketingCLI {
 
         if (user != null) {
             try {
-                LoginRepository.addUser(user);
+                userRepository.save(user);
                 System.out.println("User added to repository");
             } catch (RuntimeException e) {
                 System.out.println(e);
@@ -91,28 +102,29 @@ public class EventTicketingCLI {
         }
     }
 
-    private static void handleUserLogin() {
+    private void seeUsers() {
+        System.out.println("Registered Users:");
+
+        for (User user : userRepository.findAll()) {
+            System.out.println(user.toString());
+        }
+    }
+
+    private void handleUserLogin() {
         System.out.println("Enter username: ");
         String username = scanner.next();
         System.out.println("Enter password: ");
         String password = scanner.next();
 
-        User user = null;
-        for (User u : LoginRepository.getUsers()) {
-            if (u.getUserName().equals(username) && u.getPassword().equals(password)) {
-                user = u;
-                break;
-            }
-        }
-
-        if (user != null) {
-            System.out.printf("User found: %s - %s\n", user.getUserName(), user.getRole()); // Debug print
+        User user = userRepository.findByUsername(username);
+        if (user != null && user.getPassword().equals(password)) {
+            System.out.printf("User found: %s - %s\n", user.getUsername(), user.getRole());
             if (user.getRole().equalsIgnoreCase("vendor")) {
                 System.out.printf("Logged in as %s - %s\n", username, user.getRole());
-                handleVendorActions(user);
+                handleVendorActions((Vendor) user);
             } else if (user.getRole().equalsIgnoreCase("customer")) {
                 System.out.printf("Logged in as %s - %s\n", username, user.getRole());
-                handleCustomerActions(user);
+                handleCustomerActions((Customer) user);
             } else {
                 System.out.println("Invalid role.");
             }
@@ -121,8 +133,7 @@ public class EventTicketingCLI {
         }
     }
 
-    private static void handleCustomerActions(User user) {
-        Customer customer = new Customer(user.getUserName(), user.getPassword(), "customer");
+    private void handleCustomerActions(Customer customer) {
         Thread custThread = new Thread(customer);
         custThread.start();
 
@@ -133,10 +144,7 @@ public class EventTicketingCLI {
         }
     }
 
-    private static void handleVendorActions(User user) {
-        System.out.println(Thread.currentThread());
-
-        Vendor vendor = new Vendor(user.getUserName(), user.getPassword(), ticketPool, "vendor");
+    private void handleVendorActions(Vendor vendor) {
         Thread vendorThread = new Thread(vendor);
         vendorThread.start();
         try {
@@ -146,7 +154,7 @@ public class EventTicketingCLI {
         }
     }
 
-    private static void viewTransactionHistory() {
+    private void viewTransactionHistory() {
         System.out.println("\nTransaction History:");
         for (Transaction transaction : transactionLog.getTransactionHistory()) {
             System.out.println(transaction);

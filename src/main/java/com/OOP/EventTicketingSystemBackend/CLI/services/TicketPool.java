@@ -4,6 +4,8 @@ import com.OOP.EventTicketingSystemBackend.CLI.models.Configuration;
 import com.OOP.EventTicketingSystemBackend.CLI.models.Event;
 import com.OOP.EventTicketingSystemBackend.CLI.models.Ticket;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.Lock;
@@ -27,13 +29,14 @@ public class TicketPool {
     }
 
     // Method for customers to purchase tickets with LOCKING
-    public synchronized boolean purchaseTickets(int ticketCount) {
+    public synchronized boolean purchaseTickets(Event event, int ticketCount) {
         lock.lock();
         try {
-            // Check if there are enough tickets available in the queue
-            if (ticketQueue.size() >= ticketCount) {
+            // Check if there are enough tickets available in the event
+            if (event.getAvailableTickets() >= ticketCount) {
                 for (int i = 0; i < ticketCount; i++) {
                     ticketQueue.take(); // Remove the tickets from the queue
+                    event.decrementTickets(1); // Decrement the ticket count in the event
                     Thread.sleep(Configuration.customerRetrievalRate);
                 }
                 System.out.println(ticketCount + " tickets purchased.");
@@ -51,13 +54,14 @@ public class TicketPool {
     }
 
     // Method for vendors to release tickets with LOCKING
-    public synchronized boolean releaseTickets(int ticketCount, Event event) {
+    public synchronized boolean releaseTickets(Event event, int ticketCount) {
         lock.lock();
         try {
             // Check if releasing tickets will not exceed the max capacity
             if (ticketQueue.size() + ticketCount <= Configuration.maxTicketCapacity) {
                 for (int i = 0; i < ticketCount; i++) {
-                    ticketQueue.put(event.getTickets().take()); // Add tickets to the queue from the tickets in event
+                    ticketQueue.put(new Ticket(event.getEventName(), event.getTicketPrice(), event)); // Add tickets to the queue
+                    event.setAvailableTickets(event.getAvailableTickets() + 1); // Increment the ticket count in the event
                     Thread.sleep(Configuration.ticketReleaseRate);
                 }
                 System.out.println(ticketCount + " tickets released.");
@@ -96,6 +100,11 @@ public class TicketPool {
 
     public int getCurrentPoolSize() {
         return ticketQueue.size();
+    }
+
+    // Method to view all available tickets
+    public synchronized List<Ticket> viewAllAvailableTickets() {
+        return new ArrayList<>(ticketQueue);
     }
 }
 

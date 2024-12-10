@@ -2,13 +2,7 @@ package com.OOP.EventTicketingSystemBackend.CLI.models;
 
 import com.OOP.EventTicketingSystemBackend.CLI.services.TicketPool;
 import jakarta.persistence.*;
-import org.apache.tomcat.util.collections.SynchronizedQueue;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Entity
 public class Event {
@@ -18,25 +12,26 @@ public class Event {
     private long eventID;
 
     private String eventName;
-    private int availableTickets;
     private double ticketPrice;
+    private AtomicInteger availableTickets;
+    private int maxTickets;
 
-    @Transient
-    private BlockingQueue<Ticket> tickets;
+    @ManyToOne
+    @JoinColumn(name = "userId")
+    private User releasedBy;
 
     @Transient
     private static long eventIDCounter = 0;
 
-    public Event(String eventName, int availableTickets, double ticketPrice) {
-        this.eventID = generateEventID();
+    public Event(String eventName, int maxTickets, double ticketPrice) {
         this.eventName = eventName;
-        this.availableTickets = availableTickets;
+        this.maxTickets = maxTickets;
+        this.availableTickets = new AtomicInteger(0);
         this.ticketPrice = ticketPrice;
-        this.tickets = new LinkedBlockingQueue<Ticket>(availableTickets);
     }
 
     public Event() {
-
+        this.availableTickets = new AtomicInteger(0);
     }
 
     public static long generateEventID() {
@@ -68,15 +63,27 @@ public class Event {
     }
 
     public int getAvailableTickets() {
-        return availableTickets;
+        return availableTickets.get();
     }
 
     public void setAvailableTickets(int availableTickets) {
-        this.availableTickets = availableTickets;
+        this.availableTickets.set(availableTickets);
     }
 
-    public BlockingQueue<Ticket> getTickets() {
-        return tickets;
+    public boolean decrementTickets(int count) {
+        return availableTickets.addAndGet(-count) >= 0;
+    }
+
+    public void setReleasedBy(User releasedBy) {
+        this.releasedBy = releasedBy;
+    }
+
+    public User getReleasedBy() {
+        return releasedBy;
+    }
+
+    public int getMaxTickets() {
+        return maxTickets;
     }
 
     @Override
@@ -85,14 +92,4 @@ public class Event {
                 ", Available Tickets=" + availableTickets +
                 ", Ticket Price=" + ticketPrice + "]";
     }
-
-    public synchronized void addTicket(Ticket ticket) {
-        tickets.add(ticket);
-        try {
-            TicketPool.getInstance().addTicket(ticket);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
 }
-
