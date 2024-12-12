@@ -14,7 +14,6 @@ public class UserConverter implements Converter<User, UserDTO> {
 
     @Override
     public User convertToEntity(UserDTO userDTO) {
-        // Implement the conversion logic if needed
         return null;
     }
 }
