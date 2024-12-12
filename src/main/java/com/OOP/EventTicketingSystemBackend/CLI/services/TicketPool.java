@@ -3,6 +3,10 @@ package com.OOP.EventTicketingSystemBackend.CLI.services;
 import com.OOP.EventTicketingSystemBackend.CLI.models.Configuration;
 import com.OOP.EventTicketingSystemBackend.CLI.models.Event;
 import com.OOP.EventTicketingSystemBackend.CLI.models.Ticket;
+import com.OOP.EventTicketingSystemBackend.CLI.repositories.TicketRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,14 +15,18 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+@Service
 public class TicketPool {
     private static TicketPool instance;
     private final BlockingQueue<Ticket> ticketQueue;
     private final Lock lock = new ReentrantLock();
 
+    @Autowired
+    private  TicketRepository ticketRepository;
+
     private TicketPool() {
         // Initialize the queue with the maximum ticket capacity
-        this.ticketQueue = new LinkedBlockingQueue<>(Configuration.maxTicketCapacity);
+        this.ticketQueue = new LinkedBlockingQueue<>();
     }
 
     public static synchronized TicketPool getInstance() {
@@ -26,6 +34,20 @@ public class TicketPool {
             instance = new TicketPool();
         }
         return instance;
+    }
+
+    public static void initializeTicketPool(TicketRepository ticketRepository) {
+        for (Ticket ticket : ticketRepository.findAll()) {
+            if (ticket.getUser() == null) {
+                try {
+                    instance.addTicket(ticket);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            } else {
+                System.out.println("Ticket already purchased by user: " + ticket.getUser().getUsername());
+            }
+        }
     }
 
     // Method for customers to purchase tickets with LOCKING
@@ -102,9 +124,21 @@ public class TicketPool {
         return ticketQueue.size();
     }
 
+    public BlockingQueue<Ticket> getTicketQueue() {
+        return ticketQueue;
+    }
+
     // Method to view all available tickets
-    public synchronized List<Ticket> viewAllAvailableTickets() {
-        return new ArrayList<>(ticketQueue);
+    public synchronized void viewAllAvailableTickets() {
+        List<Ticket> tickets = new ArrayList<>(getTicketQueue());
+        if (tickets.isEmpty()) {
+            System.out.println("No tickets available.");
+        } else {
+            System.out.println("Available Tickets:");
+            for (Ticket ticket : tickets) {
+                System.out.println(ticket);
+            }
+        }
     }
 }
 

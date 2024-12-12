@@ -36,10 +36,10 @@ public class Configuration {
     public int MaxTicketCapacity = 500;
 
 
-    public static int totalTickets = 1000;
-    public static int ticketReleaseRate = 5;
-    public static int customerRetrievalRate = 3;
-    public static int maxTicketCapacity = 500;
+    public static int totalTickets;
+    public static int ticketReleaseRate;
+    public static int customerRetrievalRate;
+    public static int maxTicketCapacity;
 
     // For saving into DB
     public Configuration() {
@@ -143,6 +143,7 @@ public class Configuration {
             System.out.println("Ticket Release Rate: " + configuration.TicketReleaseRate + " tickets/sec");
             System.out.println("Customer Retrieval Rate: " + configuration.CustomerRetrievalRate + " tickets/sec");
             System.out.println("Max Ticket Capacity: " + configuration.MaxTicketCapacity);
+            updateConfiguration(configuration.TotalTickets, configuration.TicketReleaseRate, configuration.CustomerRetrievalRate, configuration.MaxTicketCapacity);
         }
     }
 

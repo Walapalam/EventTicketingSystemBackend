@@ -1,5 +1,7 @@
 package com.OOP.EventTicketingSystemBackend.DTO;
 
+import com.OOP.EventTicketingSystemBackend.CLI.models.Transaction;
+
 public class TransactionDTO {
     private long transactionId;
     private long userId;
@@ -13,6 +15,14 @@ public class TransactionDTO {
         this.ticketId = ticketId;
         this.transactionType = transactionType;
         this.transactionDate = transactionDate;
+    }
+
+    public TransactionDTO(Transaction transaction) {
+        this.transactionId = transaction.getTransactionId();
+        this.userId = transaction.getUser().getUserId();
+        this.ticketId = transaction.getTicket().getTicketId();
+        this.transactionType = transaction.getTransactionType();
+        this.transactionDate = transaction.getTimestamp().toString();
     }
 
     public long getTransactionId() {

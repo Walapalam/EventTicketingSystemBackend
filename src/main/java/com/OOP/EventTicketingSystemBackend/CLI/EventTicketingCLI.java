@@ -1,12 +1,12 @@
 package com.OOP.EventTicketingSystemBackend.CLI;
 
 import com.OOP.EventTicketingSystemBackend.CLI.models.*;
-import com.OOP.EventTicketingSystemBackend.CLI.repositories.ConfigRepository;
-import com.OOP.EventTicketingSystemBackend.CLI.repositories.UserRepository;
+import com.OOP.EventTicketingSystemBackend.CLI.repositories.*;
 import com.OOP.EventTicketingSystemBackend.CLI.services.TicketPool;
 import com.OOP.EventTicketingSystemBackend.CLI.services.TransactionLog;
 import com.OOP.EventTicketingSystemBackend.CLI.tasks.Customer;
 import com.OOP.EventTicketingSystemBackend.CLI.tasks.Vendor;
+import com.OOP.EventTicketingSystemBackend.Services.AdminService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -24,12 +24,26 @@ public class EventTicketingCLI {
     @Autowired
     private ConfigRepository configRepository;
 
+    @Autowired
+    private EventRepository eventRepository;
+
+    @Autowired
+    private TicketRepository ticketRepository;
+
+    @Autowired
+    private TransactionRepository transactionRepository;
+
+    @Autowired
+    private AdminService adminService;
 
     public void run() {
         System.out.println("Welcome to the Event Ticketing System CLI!");
         System.out.println("============================================");
 
         Configuration.getConfigurationFromDatabase(1,"src/main/java/com/OOP/EventTicketingSystemBackend/CLI/config.json", configRepository);
+        TransactionLog.initializeTransactionLog(transactionRepository);
+        TicketPool.initializeTicketPool(ticketRepository);
+
         boolean running = true;
 
         while (running) {
@@ -38,7 +52,10 @@ public class EventTicketingCLI {
             System.out.println("2. Login");
             System.out.println("3. View Transaction History");
             System.out.println("4. Registered users");
-            System.out.println("5. Exit");
+            System.out.println("5. View Available Tickets");
+            System.out.println("6. View Events");
+            System.out.println("7. Simulate System");
+            System.out.println("8. Exit");
             System.out.print("Choose an option: ");
             int choice = scanner.nextInt();
 
@@ -56,6 +73,15 @@ public class EventTicketingCLI {
                     seeUsers();
                     break;
                 case 5:
+                    ticketPool.viewAllAvailableTickets();
+                    break;
+                case 6:
+                    eventRepository.findAll().forEach(System.out::println);
+                    break;
+                case 7:
+                    adminService.startSimulation();
+                    break;
+                case 8:
                     running = false;
                     Configuration.saveConfigurationToDatabase(configRepository);
                     System.out.println("Exiting the system. Goodbye!");
@@ -81,11 +107,11 @@ public class EventTicketingCLI {
 
         User user = null;
         if (role.equalsIgnoreCase("vendor")) {
-            user = new Vendor(username, password, ticketPool, "vendor");
+            user = new Vendor(username, password, ticketPool, "vendor", eventRepository, ticketRepository);
             System.out.println(user.getRole());
             System.out.println("Added vendor");
         } else if (role.equalsIgnoreCase("customer")) {
-            user = new Customer(username, password, "customer");
+            user = new Customer(username, password, "customer", ticketRepository, eventRepository);
             System.out.println("Added customer");
             System.out.println(user.getRole());
         }
@@ -120,11 +146,23 @@ public class EventTicketingCLI {
         if (user != null && user.getPassword().equals(password)) {
             System.out.printf("User found: %s - %s\n", user.getUsername(), user.getRole());
             if (user.getRole().equalsIgnoreCase("vendor")) {
+                Vendor vendor = new Vendor(eventRepository, ticketRepository, transactionRepository);
+                vendor.setUserId(user.getUserId());
+                vendor.setUsername(user.getUsername());
+                vendor.setPassword(user.getPassword());
+                vendor.setRole(user.getRole());
+
                 System.out.printf("Logged in as %s - %s\n", username, user.getRole());
-                handleVendorActions((Vendor) user);
+                handleVendorActions(vendor);
             } else if (user.getRole().equalsIgnoreCase("customer")) {
+                Customer customer = new Customer(ticketRepository, eventRepository, transactionRepository);
+                customer.setUserId(user.getUserId());
+                customer.setUsername(user.getUsername());
+                customer.setPassword(user.getPassword());
+                customer.setRole(user.getRole());
+
                 System.out.printf("Logged in as %s - %s\n", username, user.getRole());
-                handleCustomerActions((Customer) user);
+                handleCustomerActions(customer);
             } else {
                 System.out.println("Invalid role.");
             }
@@ -132,7 +170,6 @@ public class EventTicketingCLI {
             System.out.println("Invalid username or password.");
         }
     }
-
     private void handleCustomerActions(Customer customer) {
         Thread custThread = new Thread(customer);
         custThread.start();
@@ -156,8 +193,6 @@ public class EventTicketingCLI {
 
     private void viewTransactionHistory() {
         System.out.println("\nTransaction History:");
-        for (Transaction transaction : transactionLog.getTransactionHistory()) {
-            System.out.println(transaction);
-        }
+        TransactionLog.getInstance().getTransactionHistory();
     }
 }

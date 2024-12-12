@@ -1,8 +1,8 @@
 package com.OOP.EventTicketingSystemBackend.CLI.models;
 
-import com.OOP.EventTicketingSystemBackend.CLI.services.TicketPool;
 import jakarta.persistence.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Entity
 public class Event {
@@ -13,8 +13,8 @@ public class Event {
 
     private String eventName;
     private double ticketPrice;
-    private AtomicInteger availableTickets;
     private int maxTickets;
+    private int availableTickets;
 
     @ManyToOne
     @JoinColumn(name = "userId")
@@ -23,15 +23,16 @@ public class Event {
     @Transient
     private static long eventIDCounter = 0;
 
+    @Transient
+    private final Lock lock = new ReentrantLock();
+
     public Event(String eventName, int maxTickets, double ticketPrice) {
         this.eventName = eventName;
         this.maxTickets = maxTickets;
-        this.availableTickets = new AtomicInteger(0);
         this.ticketPrice = ticketPrice;
     }
 
     public Event() {
-        this.availableTickets = new AtomicInteger(0);
     }
 
     public static long generateEventID() {
@@ -63,15 +64,43 @@ public class Event {
     }
 
     public int getAvailableTickets() {
-        return availableTickets.get();
+        lock.lock();
+        try {
+            return availableTickets;
+        } finally {
+            lock.unlock();
+        }
     }
 
     public void setAvailableTickets(int availableTickets) {
-        this.availableTickets.set(availableTickets);
+        lock.lock();
+        try {
+            this.availableTickets = availableTickets;
+        } finally {
+            lock.unlock();
+        }
     }
 
     public boolean decrementTickets(int count) {
-        return availableTickets.addAndGet(-count) >= 0;
+        lock.lock();
+        try {
+            if (availableTickets - count < 0) {
+                return false;
+            }
+            availableTickets -= count;
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void incrementTickets(int count) {
+        lock.lock();
+        try {
+            availableTickets += count;
+        } finally {
+            lock.unlock();
+        }
     }
 
     public void setReleasedBy(User releasedBy) {
@@ -90,6 +119,12 @@ public class Event {
     public String toString() {
         return "Event [ID=" + this.eventID + ", Name=" + eventName +
                 ", Available Tickets=" + availableTickets +
-                ", Ticket Price=" + ticketPrice + "]";
+                ", Ticket Price=" + ticketPrice
+                + ", Released By=" + releasedBy.getUserId()
+                + ", Max Tickets=" + maxTickets + "]";
+    }
+
+    public void setMaxTickets(int maxTickets) {
+        this.maxTickets = maxTickets;
     }
 }

@@ -1,53 +1,66 @@
 package com.OOP.EventTicketingSystemBackend.DTO;
 
+import com.OOP.EventTicketingSystemBackend.CLI.models.User;
+
 public class UserDTO {
+    private long userId;
     private String username;
     private String password;
-    private String email;
     private String role;
 
     public UserDTO(String username, String password, String email, String role) {
         this.username = username;
         this.password = password;
-        this.email = email;
         this.role = role;
+    }
+
+    public UserDTO(User user) {
+        this.userId = user.getUserId();
+        this.username = user.getUsername();
+        this.password = user.getPassword();
+        this.role = user.getRole();
     }
 
     public UserDTO() {
     }
 
+    public UserDTO(String username, String password) {
+        this.username = username;
+        this.password = password;
+    }
+
+    public long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(long userId) {
+        this.userId = userId;
+    }
+
     public String getUsername() {
-        return this.username;
-    }
-
-    public String getPassword() {
-        return this.password;
-    }
-
-    public String getEmail() {
-        return this.email;
-    }
-
-    public String getRole() {
-        return this.role;
+        return username;
     }
 
     public void setUsername(String username) {
         this.username = username;
     }
 
+    public String getPassword() {
+        return password;
+    }
+
     public void setPassword(String password) {
         this.password = password;
     }
 
-    public void setEmail(String email) {
-        this.email = email;
+    public String getRole() {
+        return role;
     }
 
     public void setRole(String role) {
         this.role = role;
     }
-    /*
+/*
     public boolean equals(final Object o) {
         if (o == this) return true;
         if (!(o instanceof UserDTO)) return false;

@@ -31,7 +31,6 @@ public abstract class User {
     private static long userIdCounter = 0;
 
     public User(String userName, String password, String role) {
-        this.userId = generateUserId();
         this.username = userName;
         this.password = password;
         this.role = role;
@@ -48,6 +47,7 @@ public abstract class User {
     public void setRole(String role) {
         this.role = role;
     }
+
 
     public abstract String getRole();
 

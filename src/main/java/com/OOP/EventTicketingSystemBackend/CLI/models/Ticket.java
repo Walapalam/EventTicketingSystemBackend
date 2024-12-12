@@ -20,19 +20,14 @@ public class Ticket {
     @JoinColumn(name = "customerID", nullable = true)
     private User customer;
 
-    @Transient
-    private static long ticketIDCounter = 0;
-
     // For single tickets
     public Ticket(String eventName, double price) {
-        this.ticketId = generateTicketID();
         this.eventName = eventName;
         this.price = price;
     }
 
     // For multiple tickets in events
     public Ticket(String eventName, double price, Event event) {
-        this.ticketId = generateTicketID();
         this.eventName = eventName;
         this.price = price;
         //this.eventID = eventID;
@@ -44,9 +39,6 @@ public class Ticket {
 
     }
 
-    public static long generateTicketID() {
-        return ++ticketIDCounter;
-    }
     public long getTicketId() {
         return ticketId;
     }
@@ -81,5 +73,18 @@ public class Ticket {
 
     public Event getEvent() {
         return event;
+    }
+
+    public void setCustomer(User customer) {
+        this.customer = customer;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("Ticket [Ticket ID=%d, Event Name=%s, Price=%.2f, Event ID=%d]", ticketId, eventName, price, event.getEventID());
+    }
+
+    public User getUser() {
+        return customer;
     }
 }

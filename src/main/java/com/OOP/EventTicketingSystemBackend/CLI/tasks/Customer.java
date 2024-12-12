@@ -1,79 +1,82 @@
 package com.OOP.EventTicketingSystemBackend.CLI.tasks;
 
-import com.OOP.EventTicketingSystemBackend.CLI.models.Event;
-import com.OOP.EventTicketingSystemBackend.CLI.models.Ticket;
-import com.OOP.EventTicketingSystemBackend.CLI.models.Transaction;
-import com.OOP.EventTicketingSystemBackend.CLI.models.User;
+import com.OOP.EventTicketingSystemBackend.CLI.models.*;
+import com.OOP.EventTicketingSystemBackend.CLI.repositories.EventRepository;
 import com.OOP.EventTicketingSystemBackend.CLI.repositories.TicketRepository;
+import com.OOP.EventTicketingSystemBackend.CLI.repositories.TransactionRepository;
 import com.OOP.EventTicketingSystemBackend.CLI.services.TicketPool;
 import com.OOP.EventTicketingSystemBackend.CLI.services.TransactionLog;
+import com.OOP.EventTicketingSystemBackend.Controllers.WebSocketHandler;
+import com.OOP.EventTicketingSystemBackend.Services.AdminService;
 import jakarta.persistence.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Entity
 @DiscriminatorValue("customer")
-@Component
-public class Customer extends User implements Runnable{
-    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Ticket> tickets;
+public class Customer extends User implements Runnable {
 
     @Transient
-    private Iterator<Ticket> listOfTickets;
+    String scenario = "CLI";
 
     @Transient
-    private Scanner scanner = new Scanner(System.in);
-    private static long userID = 0;
+    private TransactionRepository transactionRepository;
+
+    @Transient
+    private EventRepository eventRepository;
 
     @Transient
     private TicketRepository ticketRepository;
 
-    public Customer(String userName, String password, String role) {
-        super(userName, password, "customer");
-        super.role = role;
-        this.role = role;
-        this.userID = setUserID();
-        tickets = new ArrayList<Ticket>();
+    @Transient
+    private Scanner scanner = new Scanner(System.in);
+
+    @Transient
+    private static long userID = 0;
+
+    public Customer(TicketRepository ticketRepository, EventRepository eventRepository, TransactionRepository transactionRepository) {
+        this.ticketRepository = ticketRepository;
+        this.eventRepository = eventRepository;
+        this.transactionRepository = transactionRepository;
     }
 
-    public Customer(User user){
-        super(user.getUsername(), user.getPassword(), "customer");
-        tickets = new ArrayList<Ticket>();
+    public Customer(String userName, String password, String role, TicketRepository ticketRepository, EventRepository eventRepository) {
+        super(userName, password, "customer");
+        this.role = role;
+        this.eventRepository = eventRepository;
+        this.ticketRepository = ticketRepository;
     }
 
     public Customer() {
 
     }
 
-    @Autowired
-    public Customer(TicketRepository ticketRepository) {
-        this.ticketRepository = ticketRepository;
-    }
-
-
     public static long setUserID() {
         return userID++;
     }
 
-    public synchronized void purchaseTicket(int ticketID) {
-        Optional<Ticket> ticketOptional = ticketRepository.findById(ticketID);
-        if (ticketOptional.isPresent()) {
-            Ticket ticket = ticketOptional.get();
-            try {
-                if (TicketPool.getInstance().getCurrentPoolSize() > 0 && TicketPool.getInstance().retrieveTicket().equals(ticket)) {
+    public synchronized void purchaseTicket(Ticket ticket) {
+        try {
+            if (ticket != null) {
+                Event event = ticket.getEvent();
+                if (event.decrementTickets(1)) {
+                    eventRepository.save(event);
+                    ticket.setCustomer(this);
+                    ticketRepository.save(ticket);
                     System.out.println("Ticket purchased: " + ticket.getTicketId());
-                    tickets.add(ticket);
-                    TransactionLog.getInstance().logTransaction(new Transaction(this, "purchase", ticket));
+
+                    transactionRepository.save(new Transaction(this, "purchase", ticket));
                 } else {
-                    System.out.println("Ticket pool is empty or ticket not available.");
+                    System.out.println("Not enough tickets available.");
+                    throw new InterruptedException("Not Enough Tickets");
                 }
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+            } else {
+                throw new InterruptedException("Ticket Pool is Empty");
             }
-        } else {
-            System.out.println("Ticket not found in repository.");
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -83,9 +86,11 @@ public class Customer extends User implements Runnable{
                 try {
                     Ticket ticket = TicketPool.getInstance().retrieveTicket();
                     if (ticket != null) {
-                        tickets.add(ticket);
+                        ticket.setCustomer(this);
+                        ticketRepository.save(ticket);
                         event.decrementTickets(1);
-                        TransactionLog.getInstance().logTransaction(new Transaction(this, "purchase", ticket));
+                        eventRepository.save(event);
+                        transactionRepository.save(new Transaction(this, "purchase", ticket));
                         System.out.println("Ticket purchased: " + ticket.getTicketId());
                     } else {
                         System.out.println("Ticket pool is empty.");
@@ -100,61 +105,83 @@ public class Customer extends User implements Runnable{
         }
     }
 
-    @Override
-    public void run() {
-        boolean customerMenu = true;
-
-        while (customerMenu) {
-            System.out.println("\nCustomer Menu:");
-            System.out.println("1. Purchase a Ticket");
-            System.out.println("2. Purchase Multiple Tickets");
-            System.out.println("3. View Current Tickets");
-            System.out.println("4. Logout");
-            System.out.print("Choose an option: ");
-            int choice = scanner.nextInt();
-
-            switch (choice) {
-                case 1:
-                    TicketPool.getInstance().viewAllAvailableTickets();
-                    System.out.println("Enter the ticket ID to purchase: ");
-                    int ticketID = scanner.nextInt();
-                    purchaseTicket(ticketID);
-                    break;
-                case 2: // Does not work yet
-                    System.out.print("Enter the number of tickets to purchase(Does not work): ");
-                    int ticketCount = scanner.nextInt();
-                    Event dummyEvent = new Event("Sample Event", ticketCount, 100.0); // Dummy event
-                    purchaseTickets(ticketCount, dummyEvent);
-                    break;
-                case 3:
-                    System.out.println("Customer's Tickets: ");
-                    seeTickets();
-                    break;
-                case 4:
-                    customerMenu = false;
-                    System.out.println("Logged out as Customer.");
-                    break;
-                default:
-                    System.out.println("Invalid choice. Please try again.");
-            }
-        }
+    public void setScenario(String scenario) {
+        this.scenario = scenario;
     }
 
-    public void seeTickets(){
-        listOfTickets = tickets.iterator();
+    @Override
+    public void run() throws RuntimeException {
+        if (scenario.equals("simulation")){
+            while (AdminService.running.get()) {
+                try {
+                    System.out.println("Goes to purchase ticket");
+                    Event dummyEvent = new Event("Dummy Event", 10, 10.0);
+                    purchaseTickets(1, dummyEvent);
+                    Thread.sleep(3311);
+                } catch (InterruptedException e) {
+                    WebSocketHandler.broadcast("Error: Thread interrupted during ticket purchase.");
+                    Thread.currentThread().interrupt(); // Reset the interrupt status
+                    break;
+                } catch (RuntimeException e) {
+                    WebSocketHandler.broadcast("Error: " + e.getMessage());
+                    Thread.currentThread().interrupt(); // Reset the interrupt status
+                    break;
+                }
+            }
+        } else {
+            boolean customerMenu = true;
 
-        while (listOfTickets.hasNext()){
-            System.out.println(listOfTickets.next());
+            while (customerMenu) {
+                System.out.println("\nCustomer Menu:");
+                System.out.println("1. Purchase a Ticket");
+                System.out.println("2. Purchase Multiple Tickets");
+                System.out.println("3. View Current Tickets");
+                System.out.println("4. Logout");
+                System.out.print("Choose an option: ");
+                int choice = scanner.nextInt();
+
+                switch (choice) {
+                    case 1:
+                        TicketPool.getInstance().viewAllAvailableTickets();
+                        System.out.println("Enter Event ID: ");
+                        long eventID = scanner.nextLong();
+                        purchaseTickets(1, eventRepository.findById((int) eventID).orElse(null));
+                        break;
+                    case 2:
+                        TicketPool.getInstance().viewAllAvailableTickets();
+                        System.out.print("Enter the number of tickets to purchase: ");
+                        int ticketCount = scanner.nextInt();
+                        System.out.print("Enter Event ID: ");
+                        long eventId = scanner.nextLong();
+                        Event event = eventRepository.findById((int) eventId).orElse(null);
+                        if (event != null) {
+                            purchaseTickets(ticketCount, event);
+                        } else {
+                            System.out.println("Event not found.");
+                        }
+                        break;
+                    case 3:
+                        System.out.println("Customer's Tickets: ");
+                        seeTickets();
+                        break;
+                    case 4:
+                        customerMenu = false;
+                        System.out.println("Logged out as Customer.");
+                        break;
+                    default:
+                        System.out.println("Invalid choice. Please try again.");
+                }
+            }
         }
+
+    }
+
+    public void seeTickets() {
+        TicketPool.getInstance().viewAllAvailableTickets();
     }
 
     @Override
     public String getRole() {
         return "customer";
-    }
-
-    @Override
-    public String toString() {
-        return super.toString();
     }
 }

@@ -1,5 +1,6 @@
 package com.OOP.EventTicketingSystemBackend.CLI.models;
 
+import com.OOP.EventTicketingSystemBackend.CLI.tasks.Customer;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -28,8 +29,6 @@ public class Transaction {
     private static int transactionCounter = 0;
 
     public Transaction(User user, String transactionType, Ticket ticket) {
-        this.transactionId = setTransactionID();
-
         //this.userId = userId;
         this.user = user;
 
@@ -42,6 +41,34 @@ public class Transaction {
 
     public Transaction() {
 
+    }
+
+    public void setTransactionId(int transactionId) {
+        this.transactionId = transactionId;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public void setTransactionType(String transactionType) {
+        this.transactionType = transactionType;
+    }
+
+    public void setTicket(Ticket ticket) {
+        this.ticket = ticket;
+    }
+
+    public void setTimestamp(LocalDateTime timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    public static int getTransactionCounter() {
+        return transactionCounter;
+    }
+
+    public static void setTransactionCounter(int transactionCounter) {
+        Transaction.transactionCounter = transactionCounter;
     }
 
     public int getTransactionId() {
@@ -64,6 +91,14 @@ public class Transaction {
         return ticket.getTicketId();
     }
 
+    public Ticket getTicket() {
+        return ticket;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
     public LocalDateTime getTimestamp() {
         return timestamp;
     }
@@ -77,6 +112,10 @@ public class Transaction {
                 ", ticketNo=" + ticket.getTicketId() +
                 ", timestamp=" + timestamp +
                 '}';
+    }
+
+    public void setUser(Customer customer) {
+        this.user = customer;
     }
 }
 

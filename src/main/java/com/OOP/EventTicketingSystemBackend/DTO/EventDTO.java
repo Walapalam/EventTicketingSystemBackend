@@ -1,5 +1,7 @@
 package com.OOP.EventTicketingSystemBackend.DTO;
 
+import com.OOP.EventTicketingSystemBackend.CLI.models.Event;
+
 public class EventDTO {
     private long eventID;
     private String eventName;
@@ -13,6 +15,12 @@ public class EventDTO {
         this.ticketPrice = ticketPrice;
     }
 
+    public EventDTO(Event event){
+        this.eventID = event.getEventID();
+        this.eventName = event.getEventName();
+        this.availableTickets = event.getAvailableTickets();
+        this.ticketPrice = event.getTicketPrice();
+    }
 
     public long getEventID() {
         return eventID;

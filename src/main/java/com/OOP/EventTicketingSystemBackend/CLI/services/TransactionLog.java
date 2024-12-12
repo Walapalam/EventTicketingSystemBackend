@@ -1,18 +1,22 @@
 package com.OOP.EventTicketingSystemBackend.CLI.services;
 
 import com.OOP.EventTicketingSystemBackend.CLI.models.Transaction;
+import com.OOP.EventTicketingSystemBackend.CLI.repositories.EventRepository;
+import com.OOP.EventTicketingSystemBackend.CLI.repositories.TransactionRepository;
+import org.springframework.cglib.core.Block;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class TransactionLog {
     private static TransactionLog instance;
-    private List<Transaction> transactionHistory;
-    private static AtomicInteger transactionIdCounter = new AtomicInteger(1);
+    private BlockingQueue<Transaction> transactionHistory;
 
     private TransactionLog() {
-        transactionHistory = new ArrayList<>();
+        transactionHistory = new LinkedBlockingQueue<Transaction>();
     }
 
     public static synchronized TransactionLog getInstance() {
@@ -22,15 +26,20 @@ public class TransactionLog {
         return instance;
     }
 
-    public static synchronized int generateTransactionId() {
-        return transactionIdCounter.incrementAndGet();
+    public static void initializeTransactionLog(TransactionRepository transactionRepository) {
+        List<Transaction> transactions = transactionRepository.findAll();
+        for (Transaction transaction : transactions) {
+            instance.logTransaction(transaction);
+        }
     }
 
-    public synchronized void logTransaction(Transaction transaction) {
+    public void logTransaction(Transaction transaction) {
         transactionHistory.add(transaction);
     }
 
-    public synchronized List<Transaction> getTransactionHistory() {
-        return transactionHistory;
+    public void getTransactionHistory() {
+        for (Transaction transaction : transactionHistory) {
+            System.out.println(transaction);
+        }
     }
 }
